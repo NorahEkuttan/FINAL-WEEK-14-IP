@@ -1,0 +1,419 @@
+---
+title: "WEEK 14 INDEPENDENT PROJECT"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+```{r}
+df <- read.csv('http://bit.ly/CarreFourDataset')
+```
+# WEEK 4 INDEPENDENT PROJECT
+
+## UNSUPERVISED LEARNING
+
+## PCA 
+
+```{r}
+df3 <- read.csv('http://bit.ly/CarreFourSalesDataset')
+
+```
+
+```{r}
+str(df)
+```
+```{r}
+duplicated_row <- df[duplicated(df),]
+
+```
+```{r}
+df <- df[!duplicated(df), ]
+```
+
+```{r}
+dim(df)
+
+```
+Our dataset has 1000 rows and 16 columns
+
+```{r}
+null_values = colSums(is.na(df))
+```
+
+```{r}
+# check for outliers/anomalies
+
+# Finding all columns that are numerical/not strings & subsetting to new dataframe
+df_num <- df[, !sapply(df, is.character)]
+# ad_num <- subset(ad_num,select = -c(male, clicked_on_ad, area_income))
+
+par(mfrow = c(1,1), mar = c(5,4,2,2))
+boxplot(df_num[, c(1:2)], main='BoxPlots')
+boxplot(df_num[, c(3,5)])
+boxplot(df_num[, c(6,7)])
+boxplot(df_num[ ,c(4,8)])
+
+```
+```{r}
+pca_df <- df[,c(6,7,8,12,13,14,15,16)]
+head(pca_df)
+#we use all the numerical columns
+```
+
+
+
+```{r}
+# Ensuring our variances is not 0
+# Ensuring our variances is not 0
+pca_df <- pca_df[ , which(apply(pca_df, 2, var) != 0)]
+head(pca_df)
+```
+```{r}
+
+myPr <- prcomp(pca_df,scale=TRUE)
+
+```
+```{r}
+summary(myPr)
+```
+PCA1 ,PCA2 and PCA 3 explain 98.71 proportion of the variance
+
+```{r}
+str(myPr)
+
+```
+
+```{r}
+library(devtools)
+library(ggbiplot)
+ggbiplot(myPr)
+```
+
+
+```{r}
+ggbiplot(myPr, groups = as.factor(df$Branch), ellipse = TRUE, circle = TRUE)
+```
+
+```{r}
+ggbiplot(myPr, groups = as.factor(df$Product.line), ellipse = TRUE, circle = TRUE)
+```
+
+
+```{r}
+ggbiplot(myPr, groups = as.factor(df$Branch), ellipse = TRUE, circle = TRUE)
+```
+
+```{r}
+ggbiplot(myPr, groups = as.factor(df$Customer.type), ellipse = TRUE, circle = TRUE)
+```
+
+
+```{r}
+
+ggbiplot(myPr, groups = as.factor(df$Quantity), ellipse = TRUE, circle = TRUE)
+```
+
+This method is not conclusive since most of ou variables overlap hence we cannot really use PCA to get condusive results
+
+## Feature Selection in Unsupervised Learning
+
+
+## Filter Methods 
+```{r}
+# We can use the findCorrelation function included in the caret package to create a subset of variabes. 
+# This function would allows us to remove redundancy by correlation using the given dataset. 
+# It would search through a correlation matrix and return a vector of integers corresponding to the columns, 
+# to remove or reduce pair-wise correlations.
+```
+
+
+```{r}
+suppressWarnings(
+        suppressMessages(if
+                         (!require(caret, quietly=TRUE))
+                install.packages("caret")))
+library(caret)
+```
+
+# Installing and loading the corrplot package for plotting
+```{r}
+suppressWarnings(
+        suppressMessages(if
+                         (!require(corrplot, quietly=TRUE))
+                install.packages("corrplot")))
+library(corrplot)
+```
+
+
+# Calculating the correlation matrix
+
+```{r}
+correlationMatrix <- cor(pca_df)
+```
+
+
+```{r}
+# Find attributes that are highly correlated
+# ---
+#
+highlyCorrelated <- findCorrelation(correlationMatrix, cutoff=0.75)
+
+# Highly correlated attributes
+# ---
+# 
+highlyCorrelated
+
+names(pca_df[,highlyCorrelated])
+```
+
+
+```{r}
+ #We can remove the variables with a higher correlation 
+# and comparing the results graphically as shown below
+# Removing Redundant Features 
+hc <-pca_df[-highlyCorrelated]
+
+# Performing our graphical comparison
+```
+
+```{r}
+par(mfrow = c(1, 2))
+corrplot(correlationMatrix, order = "hclust")
+corrplot(cor(hc), order = "hclust")
+
+```
+
+## Wrapper Method
+
+We use the clustvarsel package that contains an implementation of wrapper methods. 
+The clustvarsel function will implement variable section methodology 
+for model-based clustering to find the optimal subset of variables in a dataset.
+
+
+
+Installing and loading our clustvarsel package
+
+```{r}
+suppressWarnings(
+        suppressMessages(if
+                         (!require(clustvarsel, quietly=TRUE))
+                install.packages("clustvarsel")))
+                         
+library(clustvarsel)
+```
+
+
+ Installing and loading our mclust package
+
+```{r}
+suppressWarnings(
+        suppressMessages(if
+                         (!require(mclust, quietly=TRUE))
+                install.packages("mclust")))
+library(mclust)
+```
+
+Sequential forward greedy search (default)
+
+```{r}
+out = clustvarsel(pca_df)
+out
+```
+
+
+The selection algorithm would indicate that the subset 
+we use for the clustering model is composed of variables X1 and X2 
+and that other variables should be rejected. 
+Having identified the variables that we use, we proceed to build the clustering model:
+
+```{r}
+Subset1 = pca_df[,out$subset]
+mod = Mclust(Subset1)
+summary(mod)
+```
+
+
+```{r}
+
+plot(mod,c("classification"))
+
+```
+
+
+
+
+ASSOCIATE ANALYSIS
+```{r}
+path <-"http://bit.ly/SupermarketDatasetII'"
+ 
+Adf<-read.csv(path)
+
+
+```
+ 
+
+```{r}
+
+str(Adf)
+
+```
+
+```{r}
+duplicated_row <- Adf[duplicated(Adf),]
+
+```
+
+```{r}
+
+Adf <- Adf[!duplicated(Adf),]
+
+
+```
+
+
+```{r}
+
+dim(Adf)
+
+```
+Our dataset has 5175 rows and 20 columns
+
+```{r}
+null_values = colSums(is.na(Adf))
+
+```
+
+```{r}
+head(Adf)
+```
+
+```{r}
+summary(Adf)
+
+```
+
+
+
+```{r}
+# Loading the arules library
+#
+library(arules)
+
+```
+
+```{r}
+
+library(arulesViz)
+
+```
+
+```{r}
+#using apriori function to build the rules
+r <- apriori(Adf,parameter=list(support=0.95, confidence = 0.8,minlen=6))
+
+```
+
+
+```{r}
+summary(r)
+```
+
+```{r}
+# Visualising our rules
+plot(r,method = "scatterplot",jitter=0)
+```
+
+```{r}
+
+# Inspecting the first ten rules 
+# 
+inspect(r[1:10])
+```
+
+
+```{r}
+
+# Ordering the rules by support and then looking at the first 10
+r2 <- sort(r, by="support", decreasing=TRUE)
+inspect(r2[1:10])
+
+```
+
+
+```{r}
+low_fat_rule <- subset(r, subset = rhs %pin% "low.fat.yogurt")
+low_fat_rule
+```
+
+
+```{r}
+r4<-sort(low_fat_rule, by="confidence", decreasing=TRUE)
+inspect(r4[1:5])
+
+```
+The table below shows the product a customer bought just before purchasing  Low fat yoghurt
+
+```{r}
+mineral.water <- subset(r, subset = rhs %pin% "mineral.water")
+mineral.water
+```
+```{r}
+r5<-sort(mineral.water, by="confidence", decreasing=TRUE)
+inspect(r5[1:5])
+```
+This tables shows the items a customer bought just before purchasing  mineral water
+
+# What if we wanted to determine items that customers might buy 
+# who have previously bought low fat yoghurt?
+
+
+
+```{r}
+low_fat_rule1 <- subset(r, subset = lhs %pin% "low.fat.yogurt")
+low_fat_rule1
+
+```
+
+
+```{r}
+r6<-sort(low_fat_rule, by="confidence", decreasing=TRUE)
+inspect(r6[1:5])
+
+```
+So the items below are items that one might buy once the have purchased low fat yoghurt a few examples are green tea,honey,salad,mineral water etc
+
+Insights
+We don’t use confidence to measure the link since it misrepresents the significance of the relationship.
+
+As a result, we employ lift as a metric for determining the strength of the regulations.
+
+The most common rule had four things in each transaction, followed by five and three.
+
+Mineral water, eggs, pasta, french fries, and chocolate are the top five products purchased.
+
+The number of transactions with only one item was 1754, followed by transactions with two and three things.
+
+Based on confidence, cake, eggs, spaghetti, meatballs, mineral water, and milk should be placed in aisles that are close to one other, as there is a good chance that people will buy those things together.
