@@ -1,0 +1,96 @@
+---
+title: "Anomally"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+ANOMALLY DETECTION
+```{r}
+df3 <- read.csv('http://bit.ly/CarreFourSalesDataset')
+df3
+
+```
+
+```{r}
+head(df3)
+```
+
+```{r}
+install.packages("magrittr") # package installations are only needed the first time you use it
+install.packages("dplyr")    # alternative installation of the %>%
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(dplyr)   
+```
+```{r}
+library(tibbletime)
+
+```
+
+ 
+```{r}
+Adf3 <- df3 %>% group_by(Date) %>%
+mutate(Date = as.Date (Date, format="%m/%d/%Y")) %>% as_tbl_time(index = Date)
+
+```
+
+```{r}
+head(Adf3)
+
+```
+
+```{r}
+library(tidyverse)
+library(anomalize)
+library(tibble)
+```
+
+```{r}
+tidyverse_cran_downloads
+
+```
+
+```{r}
+# performing anomaly detection on the sales 
+Adf3_anomalized <- Adf3 %>% summarise(Orders = sum(Sales)) %>%
+    time_decompose(Orders) %>%
+    anomalize(remainder, alpha = 0.25, max_anoms = 0.2) %>%
+    time_recompose() %>%
+    plot_anomalies(time_recomposed = TRUE) +
+    ggtitle("alpha = 0.25, max_anoms = 0.2")
+```
+
+
+I couldn’t find any anomalies with the normal Alpha of 0.05, but when I increased it to 0.25, I found some probable anomalies.
+
+CONCLUSION
+The months of February and March saw the most anomalies.
+The month of January had the fewest anomalies.
+
+RECOMMENDATIONS
+The management should check into the sales that occur in February and March because there is a risk of either losses or unexplained earnings pilfering.
+A system that detects anomalies as soon as they occur should also be in place so that they can be explored as quickly as feasible.
+
+
